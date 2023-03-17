@@ -2,14 +2,15 @@
 Author: Mrx
 Date: 2023-02-28 10:41:21
 LastEditors: Mrx
-LastEditTime: 2023-03-16 18:35:53
+LastEditTime: 2023-03-17 08:28:35
 FilePath: \cs271_final_project\raft_example.py
 Description: 
 
 Copyright (c) 2023 by Mrx, All Rights Reserved. 
 '''
-import asyncio
+# import asyncio
 import random
+import time
 
 class RaftNode:
     def __init__(self, id, peers):
@@ -23,33 +24,33 @@ class RaftNode:
         self.state = 'follower'
         self.election_timeout = self.get_random_timeout()
 
-    def start(self):
-        loop = asyncio.get_event_loop()
-        loop.create_task(self.run())
+    # def start(self):
+    #     loop = asyncio.get_event_loop()
+    #     loop.create_task(self.run())
 
-    async def run(self):
+    def start(self):
         while True:
             if self.state == 'follower':
-                await self.follower()
+                self.follower()
             elif self.state == 'candidate':
-                await self.candidate()
+                self.candidate()
             elif self.state == 'leader':
-                await self.leader()
+                self.leader()
 
-    async def follower(self):
-        await asyncio.sleep(self.election_timeout)
+    def follower(self):
+        time.sleep(self.election_timeout)
         self.state = 'candidate'
         print('Start leader election')
         print('Change state to candidate')
 
-    async def candidate(self):
+    def candidate(self):
         self.current_term += 1
         self.voted_for = self.id
         votes = 1
 
         for peer in self.peers:
             if peer != self.id:
-                response = await peer.request_vote(self.current_term, self.id, len(self.log), self.log[-1]['term'])
+                response = peer.request_vote(self.current_term, self.id, len(self.log), self.log[-1]['term'])
                 if response['term'] > self.current_term:
                     self.current_term = response['term']
                     self.state = 'follower'
@@ -62,14 +63,14 @@ class RaftNode:
             self.next_index = {peer: len(self.log) + 1 for peer in self.peers}
             self.match_index = {peer: 0 for peer in self.peers}
 
-    async def leader(self):
+    def leader(self):
         while True:
             for peer in self.peers:
                 if peer != self.id:
                     prev_log_index = self.next_index[peer] - 1
                     prev_log_term = self.log[prev_log_index]['term'] if prev_log_index >= 0 else None
                     entries = self.log[self.next_index[peer]:]
-                    response = await peer.append_entries(self.current_term, self.id, prev_log_index, prev_log_term, entries, self.commit_index)
+                    response =peer.append_entries(self.current_term, self.id, prev_log_index, prev_log_term, entries, self.commit_index)
                     if response['term'] > self.current_term:
                         self.current_term = response['term']
                         self.state = 'follower'
@@ -80,9 +81,9 @@ class RaftNode:
                         if self.check_quorum(self.match_index[peer]):
                             self.commit_index = self.match_index[peer]
 
-            await asyncio.sleep(0.1)
+            time.sleep(3)
 
-    async def request_vote(self, term, candidate_id, last_log_index, last_log_term):
+    def request_vote(self, term, candidate_id, last_log_index, last_log_term):
         if term < self.current_term:
             return {'term': self.current_term, 'vote_granted': False}
 
@@ -112,14 +113,20 @@ class RaftNode:
         return {'term': self.current_term, 'success': True}
 
     def get_random_timeout(self):
-        return random.uniform(0.15, 0.3)
+        return random.uniform(5, 10)
 
     def check_quorum(self, index):
         return sum(1 for i in self.match_index.values() if i >= index) > len(self.peers) / 2
 
 if __name__ == '__main__' :
-    list1 = [1, 2, 3, 4]
-    client = RaftNode(1, list1)
+    list1 = [1, 2, 3]
+    client1 = RaftNode(1, list1)
+    client2 = RaftNode(2, list1)
+    client3 = RaftNode(3, list1)
+    client1.start()
+    client2.start()
+    client3.start()
+
 
 
 # This implementation defines a `RaftNode` class that represents a single node in the Raft cluster. Each node has an ID, a list of peers, a current term, a voted-for candidate, a log of entries, a commit index, a last applied index, and a state (either 'follower', 'candidate', or 'leader'). 

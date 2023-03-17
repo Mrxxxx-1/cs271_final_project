@@ -8,8 +8,6 @@ print("client")
 
 usertable = {'A' : 10882, 'B' : 10884, 'C' : 10886, 'D' : 10888, 'E' : 10900} 
 user = { ('192.168.0.167', 10882) : 'A', ('192.168.0.167', 10884) : 'B', ('192.168.0.167', 10886) : 'C', ('192.168.0.167', 10888) : 'D', ('192.168.0.167', 10900) : 'E'}
-# outgoingchannel = {'A' : ['B'], 'B' : ['A', 'D'], 'C' : ['B'], 'D' : ['A', 'B', 'C', 'E'], 'E' : ['B', 'D']}
-# snapshot = {'A' : {'Token' : False, 'B' : 'Empty', 'D' : 'Empty'}, 'B' : {'Token' : False, 'A' : 'Empty', 'C' : 'Empty', 'D' : 'Empty', 'E' : 'Empty'}, 'C' : {'Token' : False, 'D' : 'Empty'}, 'D' : {'Token' : False, 'B' : 'Empty','E' : 'Empty'}, 'E' : {'Token' : False, 'D' : 'Empty'}}
 faillink = {'A' : 0, 'B' : 0, 'C' : 0, 'D' : 0, 'E' : 0}
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -26,15 +24,11 @@ s.bind((HOST, PORT))
 
 
 g_token = True
-g_probability = 0
-g_marker = 0
 
 lock = threading.Lock()
 
 def RECV():
     global g_token
-    global g_probability
-    global g_marker
     count = 0
     icount = 0 
     while g_token:
@@ -66,8 +60,6 @@ def RECV():
 
 def UI():
     global g_token
-    global g_probability
-    global g_marker
     print("1. create [<client id>. . .]")
     print("2. put <dictionary id> <key> <value>")
     print("3. get <dictionary id> <key>")
