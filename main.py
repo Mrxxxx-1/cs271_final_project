@@ -50,68 +50,8 @@ def RECV():
                 rev = json.loads(data.decode('utf-8'))
                 if 'Token' in rev :
                     pass
-                        # icount += 1
-                        # print('Received snapshot from client %s' %(user[addr]))
-                        # # print(rev)
-                        # snapshot1[user[addr]] = rev
-                        # if icount == 4 :
-                        #     snapshot1[username] = lstatus
-                        #     print('Snapshot finished, show all status below:')
-                        #     for item in snapshot1 :
-                        #         print(item, ':', snapshot1[item])
-                        #     icount = 0
-                        #     g_marker = 0
-                        #     count = 0
-                        #     # lstatus = snapshot[username]
-                        #     for item in lstatus :
-                        #         if item == 'Token' :
-                        #             lstatus[item] = False
-                        #         else :
-                        #             lstatus[item] = 'Empty'
-                        #     for item in incomingchannel1 :
-                        #         incomingchannel1[item] = 0
-                            # print(lstatus)
-                            # print(incomingchannel1)
                 else :
                     pass
-                        # if g_marker == 0 :
-                        #     print('Received the first MARKER from client %s' %(user[addr]))
-                        #     incomingchannel1[user[addr]] = 1
-                        #     lstatus['Token'] = g_token
-                        #     g_marker = 1
-                        #     count += 1
-                        #     for item in channel :
-                        #         print('Send MAKER to client %s' %(item))
-                        #         # time.sleep(1)
-                        #         s.sendto(data, (HOST, usertable[item]))
-                            # print(count)
-                            # if count == (len(lstatus)-1) :
-                            #     lstatus1 = json.dumps(lstatus)
-                            #     print('Send snapshot to initiator %s' %(rev['MAKER']))
-                            #     s.sendto(lstatus1.encode('utf-8'), (HOST, usertable[rev['MAKER']]))
-                        # else :
-                        #     print('Received MARKER from client %s' %(user[addr]))
-                        #     incomingchannel1[user[addr]] = 1
-                        #     count += 1
-                            # print(count)
-                            # a = (count == (len(lstatus)-1))
-                    # if count == channelnum and rev['MARKER'] != username :
-                    #     lstatus1 = json.dumps(lstatus)
-                    #     print('Send snapshot to initiator %s' %(rev['MARKER']))
-                    #     # time.sleep(1)
-                    #     s.sendto(lstatus1.encode('utf-8'), (HOST, usertable[rev['MARKER']]))
-                    #     icount = 0
-                    #     g_marker = 0
-                    #     count = 0
-                    #     for item in lstatus :
-                    #         if item == 'Token' :
-                    #             lstatus[item] = False
-                    #         else :
-                    #             lstatus[item] = 'Empty'
-                    #     for item in incomingchannel1 :
-                    #         incomingchannel1[item] = 0
-                        # print(lstatus)
-                        # print(incomingchannel1)
       except :
         if data.decode('utf-8') == 'Fail link':
             faillink[user[addr]] = 1
@@ -120,29 +60,9 @@ def RECV():
                 # if(random_unit(g_probability/100)) :
         if True :
             pass
-                    # if (g_marker == 1) and (incomingchannel1[user[addr]] == 0) :
-                    #     lstatus[user[addr]] = True
-                    # print('received token from client %s' %(user[addr]))
-                    # lock.acquire()
-                    # g_token = True
-                    # lock.release()
-                    # time.sleep(2)
-                    # t = random.randint(0, len(channel)-1)
-                    # print('Send token to client %s \n' %(channel[t]))
-                    # data = 'Token'
-                    # lock.acquire()
-                    # g_token = False
-                    # lock.release()
-                    # # time.sleep(1)
-                    # s.sendto(data.encode('utf-8'), (HOST, usertable[channel[t]]))
         else :
             pass
-                    # lock.acquire()
-                    # g_token = False
-                    # lock.release()
-    #   print(faillink)
-    #   if g_token == False:
-    #       break
+
 
 def UI():
     global g_token
@@ -156,52 +76,16 @@ def UI():
     print("6. failLink <dest>")
     print("7. fixLink <dest>")
     print("8. failProcess")
-    # print("0. Exit application")
     while True :
         a = input("please insert command\n")
         if a == "0" :
             pass
-            # flag = False
-            # # to server
-            # break
         elif a == "1" :
             pass
-            # print('Issue token to local client')
-            # lock.acquire()
-            # g_token = True
-            # lock.release()
-            # time.sleep(2)
-            # t = random.randint(0, len(channel)-1)
-            # print('Send token to client %s \n' %(channel[t]))
-            # data = 'Token'
-            # lock.acquire()
-            # g_token = False
-            # lock.release()
-            # # time.sleep(1)
-            # s.sendto(data.encode('utf-8'), (HOST, usertable[channel[t]]))
-
-
         elif a == "2" :
             pass
-            # print('Initiating a Snapshot')
-            # snapshot1 = snapshot
-            # snapshot1[username]['Token'] = g_token
-            # # print(snapshot)
-            # data2 = {}
-            # data2['MARKER'] = username
-            # data22 = json.dumps(data2)
-            # g_marker = 1
-            # for item in channel :
-            #     print('Send MAKER to client %s' %(item))
-            #     # time.sleep(1)
-            #     s.sendto(data22.encode('utf-8'), (HOST, usertable[item]))
-
-
         elif a == "3" :
             pass
-            # g_probability = input('Please enter token loss probability\n')
-            # g_probability = float(g_probability)
-            # print('Now client has a %.1f %% chance of losing the token' %(g_probability))
         elif a == '4' :
             pass
         elif a == '5' :
@@ -232,6 +116,8 @@ def UI():
         elif a == '8' :
             g_token = False
             print('Fail process %s' %(username))
+            data = 'Stop'
+            s.sendto(data.encode('utf-8'), (HOST, usertable[username]))
             break
         time.sleep(1)
 
@@ -241,11 +127,35 @@ def sendreq(data, dest) :
     else :
         print("Unable to connect to process %s" %(dest))
 
+n = 0
 
 t1 = threading.Thread(target=RECV)
 t2 = threading.Thread(target=UI)
 
 t1.start()
 t2.start()
-t1.join()
+
 t2.join()
+n = n + 1
+t1.join()
+n = n + 1
+
+while True:
+    if n == 2:
+        while True :
+            command = input("Please input Y to restart the process : ")
+            if command != 'Y' :
+                print("wrong command!")
+                continue
+            n = 0
+            t1 = threading.Thread(target=RECV)
+            t2 = threading.Thread(target=UI)
+            t1.start()
+            t2.start()
+
+            t2.join()
+            n = n + 1
+            t1.join()
+            n = n + 1
+            break 
+    time.sleep(1)
