@@ -2,7 +2,7 @@
 Author: Mrx
 Date: 2023-03-18 17:19:59
 LastEditors: Mrx
-LastEditTime: 2023-03-19 00:36:37
+LastEditTime: 2023-03-19 10:49:33
 FilePath: \cs271_final_project\encryption.py
 Description: 
 
@@ -11,19 +11,16 @@ Copyright (c) 2023 by Mrx, All Rights Reserved.
 
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
-import json
-import os
 
 
 def generate_dictionary_key(clientlist, dic_id, client_id):
     client_id = str(client_id)
     dic_id = str(dic_id)
     KEY_DIR = "keys/" + client_id +'/'
-    member_public_keys = {}
     # Generate a new RSA key pair for the dictionary
     dictionary_private_key = rsa.generate_private_key(
         public_exponent=65537,
-        key_size=2048
+        key_size=1024
     )
     dictionary_public_key = dictionary_private_key.public_key()
 
@@ -36,7 +33,17 @@ def generate_dictionary_key(clientlist, dic_id, client_id):
         format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption()
     )
-    private_key_bytes = str(private_key_bytes)
+
+    private_key = dic_id
+
+    with open(KEY_DIR + dic_id + "_public.pem", "wb") as f:
+        f.write(public_key_bytes)
+    # client_private_key = load_private_key(client_id, client_id)
+    # decrypt_private_key = decrypt_message(local_private_key_bytes, client_private_key)
+    # print(decrypt_private_key)
+    with open(KEY_DIR + dic_id + "_private.pem", "wb") as f:
+        f.write(private_key_bytes)
+    # private_key_bytes = str(private_key_bytes)
 
     # Encrypt the dictionary's private key for each member
     member_keys = {}
@@ -45,22 +52,15 @@ def generate_dictionary_key(clientlist, dic_id, client_id):
         # print(private_key_bytes)
         # private_key_bytes = 'fuck'
         # print(client_public_key)
-        encrypted_private_key = encrypt_message(private_key_bytes, client_public_key)
+        encrypted_private_key = encrypt_message(private_key, client_public_key)
+        # encrypted_private_key = encrypt_message(private_key, client_public_key)
         member_keys[client] = encrypted_private_key
     key = {}
 
     key['dictionary_public_key'] = public_key_bytes
     key['member_keys'] = member_keys
-    local_private_key_bytes = member_keys[int(client_id)]
-    print(local_private_key_bytes)
-    with open(KEY_DIR + dic_id + "_public.pem", "wb") as f:
-        f.write(public_key_bytes)
-    client_private_key = load_private_key(client_id, client_id)
-    decrypt_private_key = decrypt_message(local_private_key_bytes, client_private_key)
-    print(decrypt_private_key)
-    # with open(KEY_DIR + dic_id + "_private.pem", "wb") as f:
-    #     f.write(bytes(private_key_bytes))
-    return key
+
+    return public_key_bytes, private_key_bytes, member_keys
 
     # The encrypted private keys for each member can be sent to the corresponding member
 
@@ -69,39 +69,15 @@ def generate_dictionary_key(clientlist, dic_id, client_id):
 
 def store_dictionary_parameter(dic_id):
     pass
-    # # Load the dictionary file
-
-    # member_id = 'Alice'
-    # member_private_key = member_private_keys[member_id]
-    # encrypted_private_key = member_keys[member_id]
-    # decrypted_private_key = member_private_key.decrypt(
-    #     encrypted_private_key,
-    #     padding.OAEP(
-    #         mgf=padding.MGF1(algorithm=hashes.SHA256()),
-    #         algorithm=hashes.SHA256(),
-    #         label=None
-    #     )
-    # )
-    # decrypted_private_key = serialization.load_der_private_key(
-    #     decrypted_private_key,
-    #     password=None,
-    #     # backend=default2_backend()
-    # )
-
-    # with open('dictionary.json', 'r') as f:
-    #     data = json.load(f)
-    # # The member can now use the decrypted private key to access the dictionary values
-    # decrypted_data = json.loads(decrypted_private_key.decrypt(
-    #     data['ciphertext'],
-    #     padding.OAEP(
-    #         mgf=padding.MGF1(algorithm=hashes.SHA256()),
-    #         algorithm=hashes.SHA256(),
-    #         label=None
-    #     )
-    # ).decode('utf-8'))
-
-    # # Access the dictionary values
-    # print(decrypted_data['key'])
+    # local_private_key_bytes = member_keys[int(client_id)]
+    # print(local_private_key_bytes)
+    # with open(KEY_DIR + dic_id + "_public.pem", "wb") as f:
+    #     f.write(public_key_bytes)
+    # # client_private_key = load_private_key(client_id, client_id)
+    # # decrypt_private_key = decrypt_message(local_private_key_bytes, client_private_key)
+    # # print(decrypt_private_key)
+    # with open(KEY_DIR + dic_id + "_private.pem", "wb") as f:
+    #     f.write(bytes(private_key_bytes))
 
 
 
