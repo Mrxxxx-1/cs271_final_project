@@ -2,7 +2,7 @@
 Author: Mrx
 Date: 2023-03-17 08:36:25
 LastEditors: Mrx
-LastEditTime: 2023-03-17 11:38:07
+LastEditTime: 2023-03-17 12:11:15
 FilePath: \cs271_final_project\raft.py
 Description: 
 
@@ -21,6 +21,40 @@ user = { ('192.168.0.167', 10882) : 1, ('192.168.0.167', 10884) : 2, ('192.168.0
 faillink = {1 : 0, 2 : 0, 3 : 0, 4 : 0, 5 : 0}
 userlist = [1, 2, 3]
 HOST = '192.168.0.167'
+
+g_token = True
+state = 'follower'
+test = 0
+
+def RECV():
+    global g_token
+    count = 0
+    icount = 0 
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    while g_token:
+      try:
+        (data, addr) = s.recvfrom(1024)
+      except ConnectionResetError:
+        print("Unable to connect to process")
+        continue
+      time.sleep(3)
+      try :
+            if isinstance(json.loads(data.decode('utf-8')), dict) :
+                rev = {}
+                rev = json.loads(data.decode('utf-8'))
+                if 'Token' in rev :
+                    pass
+                else :
+                    pass
+      except :
+        if data.decode('utf-8') == 'Fail link':
+            faillink[user[addr]] = 1
+        if data.decode('utf-8') == 'Fix link' :
+            faillink[user[addr]] = 0
+        if True :
+            pass
+        else :
+            pass
 
 
 class RaftNode:
@@ -41,6 +75,7 @@ class RaftNode:
         self.socket.settimeout(0.1)
 
     def start(self):
+        
         logging.info(f"Node {self.id}: Starting node")
         # print(f"Node {self.id}: Starting node")
         while True:
@@ -52,6 +87,7 @@ class RaftNode:
                 self.leader()
 
     def follower(self):
+        global state
         logging.info(f"Node {self.id}: Entering follower state")
         # print(f"Node {self.id}: Entering follower state")
         start_time = time.monotonic()
@@ -72,9 +108,11 @@ class RaftNode:
                 if time.monotonic() - start_time > self.election_timeout:
                     logging.info(f"Node {self.id}: Timeout occurred")
                     self.state = 'candidate'
+                    state = 'candidate'
                     break
 
     def candidate(self):
+        global state
         logging.info(f"Node {self.id}: Entering candidate state")
         # print(f"Node {self.id}: Entering candidate state")
         self.current_term += 1
@@ -96,11 +134,13 @@ class RaftNode:
                     if message['data']['term'] > self.current_term:
                         self.current_term = message['data']['term']
                         self.state = 'follower'
+                        state = 'follower'
                         break
                     elif message['data']['vote_granted']:
                         votes_received += 1
                         if votes_received > len(self.peers) / 2:
                             self.state = 'leader'
+                            state = 'leader'
                             break
                 elif message['type'] == 'append_entries':
                     response = self.handle_append_entries(message['data'])
@@ -108,6 +148,7 @@ class RaftNode:
                     if message['data']['term'] > self.current_term:
                         self.current_term = message['data']['term']
                         self.state = 'follower'
+                        state = 'follower'
                         break
                 elif message['type'] == 'leader_heartbeat':
                     self.handle_leader_heartbeat(message['data'])
@@ -116,6 +157,7 @@ class RaftNode:
                 if time.monotonic() - start_time > self.election_timeout:
                     logging.info(f"Node {self.id}: Timeout occurred")
                     self.state = 'candidate'
+                    state = 'candidate'
                     break
     def leader(self):
         logging.info(f"Node {self.id}: Entering leader state")
@@ -235,6 +277,10 @@ class RaftNode:
                 self.socket.sendto(data.encode('utf-8'), (HOST, usertable[dest]))
         else :
             print("Unable to connect to process %s" %(dest))
+    # def test(self):
+    #     global test
+    #     test = 1
+
 if __name__ == '__main__' :
     while True :
         uid = input("Please input your userid : ")
@@ -252,3 +298,6 @@ if __name__ == '__main__' :
     threading.Thread(target=node1.start).start()
     threading.Thread(target=node2.start).start()
     threading.Thread(target=node3.start).start()
+    # node1 = RaftNode(1, userlist)
+    # node1.test()
+    # print(test)
