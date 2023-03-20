@@ -2,7 +2,7 @@
 Author: Mrx
 Date: 2023-03-18 17:19:59
 LastEditors: Mrx
-LastEditTime: 2023-03-19 12:52:13
+LastEditTime: 2023-03-20 07:28:05
 FilePath: \cs271_final_project\encryption.py
 Description: 
 
@@ -53,8 +53,11 @@ def generate_dictionary_key(clientlist, dic_id, client_id):
         # private_key_bytes = 'fuck'
         # print(client_public_key)
         encrypted_private_key = encrypt_message(private_key, client_public_key)
+        
         # encrypted_private_key = encrypt_message(private_key, client_public_key)
-        member_keys[client] = encrypted_private_key
+        member_keys[client] = str(encrypted_private_key)
+        # print(encrypted_private_key)
+        # print(bytes(encrypted_private_key))
     key = {}
 
     key['dictionary_public_key'] = public_key_bytes

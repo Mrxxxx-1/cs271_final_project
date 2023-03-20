@@ -3,14 +3,16 @@ import threading, time
 from sys import exit
 import json
 from dictionary import *
+import os
 
 print("client")
 
 usertable = {1 : 10882, 2 : 10884, 3 : 10886, 4 : 10888, 5 : 10900} 
 user = { ('192.168.0.167', 10882) : 1, ('192.168.0.167', 10884) : 2, ('192.168.0.167', 10886) : 3, ('192.168.0.167', 10888) : 4, ('192.168.0.167', 10900) : 5}
-faillink = {1 : 0, 2 : 0, 3 : 0, 4 : 0, 5 : 0}
+faillink = {1 : 0, 2 : 0, 3 : 0, 4 : 0, 5 : 0, 10666 : 0}
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 usertable2 = {1 : 10782, 2 : 10784, 3 : 10786, 4 : 10788, 5 : 10700}
+l_port = 10666
 
 while True :
     username = input("Please input your username : ")
@@ -20,14 +22,16 @@ while True :
         continue
     break
 
-PORT = usertable[username]
+PORT = usertable2[username]
 HOST = '192.168.0.167'
 s.bind((HOST, PORT))
 
 
 def read_dic_id():
-    with open("keys/"+ str(username) +"/my_dic.txt", "r") as file:
-        dic_list = [line.strip() for line in file.readlines()]
+    if os.path.exists("keys/" + str(username) + "/my_dic.txt"):
+        with open("keys/"+ str(username) +"/my_dic.txt", "r") as file:
+            dic_list = [line.strip() for line in file.readlines()]
+    dic_list = []
     return dic_list
     
 
@@ -40,7 +44,7 @@ def write_dic_id():
 g_token = True
 g_dictionary = []
 g_dictionary = read_dic_id()
-
+print(g_dictionary)
 
 lock = threading.Lock()
 
@@ -104,6 +108,9 @@ def UI():
             dic.commit_log_entry()
             # request needed send to leader
             log = dic.log_entry
+            message_s = json.dumps(log)
+            sendreq(message_s, l_port)
+            print('send message to leader')
             dic_file = {
                 'id' : log['dic_id'],
                 'members' : log['members']
@@ -135,8 +142,10 @@ def UI():
                 'from': username,
                 'type': 'put',
                 'dic_id': parameter[0],
-                'data': encrypt_data,
+                'data': str(encrypt_data),
             }
+            message_s = json.dumps(message)
+            sendreq(message_s, l_port)
             dic = {}
             dic = dic_read(message['dic_id'], str(username))
             dic[parameter[1]] = parameter[2]
@@ -153,8 +162,10 @@ def UI():
                 'from': username,
                 'type': 'get',
                 'dic_id': parameter[0],
-                'data': encrypt_data,
+                'data': str(encrypt_data),
             }
+            message_s = json.dumps(message)
+            sendreq(message_s, l_port)
             data = {}
             data = dic_read(message['dic_id'], str(username))
             key = data[parameter[1]]
@@ -175,7 +186,7 @@ def UI():
                 print("wrong dest process!")
                 continue
             data = 'Fail link'
-            sendreq(data, dest)
+            sendreq(data, usertable[dest])
             faillink[dest] = 1
             # s.sendto(data.encode('utf-8'), (HOST, usertable[dest]))
             print('Fail link %s\n' %(dest))
@@ -189,7 +200,7 @@ def UI():
                 continue
             data = 'Fix link'
             faillink[dest] = 0
-            sendreq(data, dest)
+            sendreq(data, usertable[dest])
             # s.sendto(data.encode('utf-8'), (HOST, usertable[dest]))
             print('Fix link %s' %(dest))
             pass
@@ -203,7 +214,7 @@ def UI():
 
 def sendreq(data, dest) :
     if faillink[dest] == 0: 
-            s.sendto(data.encode('utf-8'), (HOST, usertable[dest]))
+            s.sendto(data.encode('utf-8'), (HOST, dest))
     else :
         print("Unable to connect to process %s" %(dest))
 

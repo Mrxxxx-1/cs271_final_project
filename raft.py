@@ -2,7 +2,7 @@
 Author: Mrx
 Date: 2023-03-17 08:36:25
 LastEditors: Mrx
-LastEditTime: 2023-03-20 00:51:49
+LastEditTime: 2023-03-20 08:53:42
 FilePath: \cs271_final_project\raft.py
 Description: 
 
@@ -65,18 +65,20 @@ class RaftNode:
         while True:
             time.sleep(3)
             try:
-                data, addr = self.socket.recvfrom(1024)
+                data, addr = self.socket.recvfrom(4096)
                 message = json.loads(data.decode())
                 if message['type'] == 'request_vote':
                     response = self.handle_request_vote(message['data'])
                     self.send_message(message['from'], 'request_vote_response', response)
                 elif message['type'] == 'append_entries':
                     response = self.handle_append_entries(message['data'])
+                    print('handling append entries from leader')
                     self.send_message(message['from'], 'ack', response)
                 elif message['type'] == 'leader_heartbeat':
                     self.handle_leader_heartbeat(message['data'])
                     start_time = time.monotonic()
                 elif message['type'] == 'commit':
+                    print('handling commit entries from leader')
                     pass
             except socket.timeout:
                 if time.monotonic() - start_time > self.election_timeout:
@@ -103,7 +105,7 @@ class RaftNode:
         while True:
             time.sleep(3)
             try:
-                data, addr = self.socket.recvfrom(1024)
+                data, addr = self.socket.recvfrom(4096)
                 message = json.loads(data.decode())
                 if message['type'] == 'request_vote_response':
                     if message['data']['term'] > self.current_term:
@@ -119,15 +121,25 @@ class RaftNode:
                             break
                 elif message['type'] == 'append_entries':
                     response = self.handle_append_entries(message['data'])
-                    self.send_message(message['from'], 'ack', response)
+                    self.send_to_leader(message['from'], 'ack', response)
                     if message['data']['term'] > self.current_term:
                         self.current_term = message['data']['term']
                         self.state = 'follower'
                         state = 'follower'
+                        self.voted_for = message['data']['leader_id']
                         break
                 elif message['type'] == 'leader_heartbeat':
                     self.handle_leader_heartbeat(message['data'])
                     start_time = time.monotonic()
+                elif message['type'] == 'request_vote':
+                    response = self.handle_request_vote(message['data'])
+                    self.send_message(message['from'], 'request_vote_response', response)
+                    if response['vote_granted'] ==True:
+                        self.current_term = message['data']['term']
+                        self.state = 'follower'
+                        state = 'follower'
+                        break
+                    
             except socket.timeout:
                 if time.monotonic() - start_time > self.election_timeout:
                     logging.info(f"Node {self.id}: Timeout occurred")
@@ -137,15 +149,17 @@ class RaftNode:
     
     def leader(self):
         logging.info(f"Node {self.id}: Entering leader state")
-        # print(f"Node {self.id}: Entering leader state")
-        self.next_index = {peer_id: len(self.log)+1 for peer_id in self.peers}
-        t1 = threading.Thread(target=self.leader_heartbeat)
-        t2 = threading.Thread(target=self.leader_append_entries)
-        t1.start()
-        t2.start()
-        t1.join()
-        t2.join()
-        # while True:
+        # # print(f"Node {self.id}: Entering leader state")
+        # self.next_index = {peer_id: len(self.log)+1 for peer_id in self.peers}
+        # log_entry = {}
+        # log_entry = {
+        #     'term': self.current_term,
+        #     'index': self.next_index,
+        #     'type': 'leader_election',
+        #     'data': self.id
+        # }
+        # self.log.append(log_entry)
+        # self.commit_index += 1
         #     for peer_id in self.peers:
         #         # if self.next_index[peer_id] > 0:
         #         prev_log_index = self.next_index[peer_id] - 1
@@ -162,7 +176,12 @@ class RaftNode:
         #             'entries': entries,
         #             'leader_commit': self.commit_index,
         #         })
-        #     time.sleep(1)
+        t1 = threading.Thread(target=self.leader_heartbeat)
+        t2 = threading.Thread(target=self.leader_append_entries)
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
 
     def handle_request_vote(self, data):
         if data['term'] < self.current_term:
@@ -178,11 +197,13 @@ class RaftNode:
     def handle_append_entries(self, data):
         if data['term'] < self.current_term:
             return {'term': self.current_term, 'success': False}
-        elif len(self.log) <= data['prev_log_index'] or self.log[data['prev_log_index']]['term'] != data['prev_log_term']:
+        elif len(self.log) < data['prev_log_index']:
+        # elif len(self.log) <= data['prev_log_index'] or self.log[data['prev_log_index']]['term'] != data['prev_log_term']:
             return {'term': self.current_term, 'success': False}
         else:
             # already appended the log
-            self.log = self.log[:data['prev_log_index']+1] + data['entries']
+            # self.log = self.log[:data['prev_log_index']+1] + data['entries']
+            self.write_logfile(data['entries'])
             self.commit_index = min(data['leader_commit'], len(self.log)-1)
             return {'term': self.current_term, 'success': True}
 
@@ -195,9 +216,18 @@ class RaftNode:
             'type': message_type,
             'data': data,
         }
-        print(data)
+        # print(data)
         self.socket.sendto(json.dumps(message).encode(), (HOST, usertable[recipient_id]))
-
+    
+    def send_to_leader(self, recipient_id, message_type, data):
+        message = {
+            'from': self.id,
+            'type': message_type,
+            'data': data,
+        }
+        # print(data)
+        self.socket.sendto(json.dumps(message).encode(), (HOST, l_port))
+    
     def get_random_timeout(self):
         return random.uniform(6, 10)
 
@@ -221,18 +251,26 @@ class RaftNode:
         start_time = time.monotonic()
         majority = 1
         while True:
-            time.sleep(3)
             try:
-                data, addr = self.socket.recvfrom(1024)
+                data, addr = s.recvfrom(4096)
                 message = json.loads(data.decode())
+                print(message)
                 if message['type'] == 'create' or message['type'] == 'put' or message['type'] == 'get':
                     majority = 1
-                    self.write_logfile()
+                    print('send append entries RPC to all')
+                    log_entry = {}
+                    log_entry = {
+                        'term': self.current_term,
+                        'index': self.next_index,
+                        'type': message['type'],
+                        'data': message['data']
+                    }
+                    self.write_logfile(log_entry)
                     for peer_id in self.peers:
                         # if self.next_index[peer_id] > 0:
                         prev_log_index = self.next_index[peer_id] - 1
                         prev_log_term = self.log[prev_log_index]['term'] if prev_log_index > 0 else -1
-                        entries = self.log[self.next_index[peer_id]:]
+                        entries = self.log[self.next_index[peer_id]]
                         # prev_log_index = None
                         # prev_log_term = None
                         # entries = 'entries'             
@@ -248,6 +286,7 @@ class RaftNode:
                 if message['type'] == 'ack':
                     if message['data']['success']:
                         majority += 1
+                        self.next_index[message['from']] += 1
                     if majority > len(self.peers) / 2:
                         for peer_id in self.peers:
                             self.send_message(peer_id, 'commit', {
@@ -267,28 +306,23 @@ class RaftNode:
                 #     state = 'candidate'
                 #     break
                 pass
-        while False:
-            for peer_id in self.peers:
-                # if self.next_index[peer_id] > 0:
-                prev_log_index = self.next_index[peer_id] - 1
-                prev_log_term = self.log[prev_log_index]['term'] if prev_log_index > 0 else -1
-                entries = self.log[self.next_index[peer_id]:]
-                # prev_log_index = None
-                # prev_log_term = None
-                # entries = 'entries'             
-                self.send_message(peer_id, 'append_entries', {
-                    'term': self.current_term,
-                    'leader_id': self.id,
-                    'prev_log_index': prev_log_index,
-                    'prev_log_term': prev_log_term,
-                    'entries': entries,
-                    'leader_commit': self.commit_index,
-                })
-        pass
     
-    def write_logfile(self):
+    def write_logfile(self, message):
+        self.log.append(message)
+        self.commit_index += 1
+        self.wlogfile(self.log)
         pass
-    
+
+    def wlogfile(self, log_entry):
+        with open("log " + str(self.id) + '.txt', "w") as file:
+            data = json.dumps(log_entry)
+            file.write(data)
+    def rlogfile(self):
+        with open("log " + str(self.id) + '.txt', "r") as file:
+            my_list = file.read()
+            my_list = json.loads(my_list)
+            return my_list
+
 if __name__ == '__main__' :
     while True :
         uid = input("Please input your userid : ")

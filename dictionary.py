@@ -2,7 +2,7 @@
 Author: Mrx
 Date: 2023-03-18 17:05:30
 LastEditors: Mrx
-LastEditTime: 2023-03-19 22:16:45
+LastEditTime: 2023-03-20 08:07:44
 FilePath: \cs271_final_project\dictionary.py
 Description: 
 
@@ -41,13 +41,18 @@ class Dictionary:
     #     return encrypted_key
     
     def create_log_entry(self):
+        data = {
+            'dic_id': self.id,
+            'members': self.members,
+            'public_key': self.public_key.decode(),
+            'member_keys': self.member_keys
+        }
         log_entry = {
             'from': self.client_id,
             'type': 'create',
             'dic_id': self.id,
             'members': self.members,
-            'public_key': self.public_key,
-            'member_keys': self.member_keys
+            'data': data
         }
         return log_entry
     
