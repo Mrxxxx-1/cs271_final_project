@@ -2,7 +2,7 @@
 Author: Mrx
 Date: 2023-03-17 08:36:25
 LastEditors: Mrx
-LastEditTime: 2023-03-17 12:11:15
+LastEditTime: 2023-03-20 00:51:49
 FilePath: \cs271_final_project\raft.py
 Description: 
 
@@ -20,42 +20,13 @@ usertable = {1 : 10882, 2 : 10884, 3 : 10886, 4 : 10888, 5 : 10900}
 user = { ('192.168.0.167', 10882) : 1, ('192.168.0.167', 10884) : 2, ('192.168.0.167', 10886) : 3, ('192.168.0.167', 10888) : 4, ('192.168.0.167', 10900) : 5}
 faillink = {1 : 0, 2 : 0, 3 : 0, 4 : 0, 5 : 0}
 userlist = [1, 2, 3]
+usertable2 = {1 : 10782, 2 : 10784, 3 : 10786, 4 : 10788, 5 : 10700}
+l_port = 10666
 HOST = '192.168.0.167'
 
 g_token = True
 state = 'follower'
 test = 0
-
-def RECV():
-    global g_token
-    count = 0
-    icount = 0 
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    while g_token:
-      try:
-        (data, addr) = s.recvfrom(1024)
-      except ConnectionResetError:
-        print("Unable to connect to process")
-        continue
-      time.sleep(3)
-      try :
-            if isinstance(json.loads(data.decode('utf-8')), dict) :
-                rev = {}
-                rev = json.loads(data.decode('utf-8'))
-                if 'Token' in rev :
-                    pass
-                else :
-                    pass
-      except :
-        if data.decode('utf-8') == 'Fail link':
-            faillink[user[addr]] = 1
-        if data.decode('utf-8') == 'Fix link' :
-            faillink[user[addr]] = 0
-        if True :
-            pass
-        else :
-            pass
-
 
 class RaftNode:
     def __init__(self, id, peers):
@@ -78,7 +49,7 @@ class RaftNode:
         
         logging.info(f"Node {self.id}: Starting node")
         # print(f"Node {self.id}: Starting node")
-        while True:
+        while g_token:
             if self.state == 'follower':
                 self.follower()
             elif self.state == 'candidate':
@@ -92,6 +63,7 @@ class RaftNode:
         # print(f"Node {self.id}: Entering follower state")
         start_time = time.monotonic()
         while True:
+            time.sleep(3)
             try:
                 data, addr = self.socket.recvfrom(1024)
                 message = json.loads(data.decode())
@@ -100,10 +72,12 @@ class RaftNode:
                     self.send_message(message['from'], 'request_vote_response', response)
                 elif message['type'] == 'append_entries':
                     response = self.handle_append_entries(message['data'])
-                    self.send_message(message['from'], 'append_entries_response', response)
+                    self.send_message(message['from'], 'ack', response)
                 elif message['type'] == 'leader_heartbeat':
                     self.handle_leader_heartbeat(message['data'])
                     start_time = time.monotonic()
+                elif message['type'] == 'commit':
+                    pass
             except socket.timeout:
                 if time.monotonic() - start_time > self.election_timeout:
                     logging.info(f"Node {self.id}: Timeout occurred")
@@ -127,6 +101,7 @@ class RaftNode:
                 'last_log_term': self.log[-1]['term'] if self.log else -1,
             })
         while True:
+            time.sleep(3)
             try:
                 data, addr = self.socket.recvfrom(1024)
                 message = json.loads(data.decode())
@@ -144,7 +119,7 @@ class RaftNode:
                             break
                 elif message['type'] == 'append_entries':
                     response = self.handle_append_entries(message['data'])
-                    self.send_message(message['from'], 'append_entries_response', response)
+                    self.send_message(message['from'], 'ack', response)
                     if message['data']['term'] > self.current_term:
                         self.current_term = message['data']['term']
                         self.state = 'follower'
@@ -159,28 +134,35 @@ class RaftNode:
                     self.state = 'candidate'
                     state = 'candidate'
                     break
+    
     def leader(self):
         logging.info(f"Node {self.id}: Entering leader state")
         # print(f"Node {self.id}: Entering leader state")
         self.next_index = {peer_id: len(self.log)+1 for peer_id in self.peers}
-        while True:
-            for peer_id in self.peers:
-                # if self.next_index[peer_id] > 0:
-                prev_log_index = self.next_index[peer_id] - 1
-                prev_log_term = self.log[prev_log_index]['term'] if prev_log_index > 0 else -1
-                entries = self.log[self.next_index[peer_id]:]
-                # prev_log_index = None
-                # prev_log_term = None
-                # entries = 'entries'             
-                self.send_message(peer_id, 'append_entries', {
-                    'term': self.current_term,
-                    'leader_id': self.id,
-                    'prev_log_index': prev_log_index,
-                    'prev_log_term': prev_log_term,
-                    'entries': entries,
-                    'leader_commit': self.commit_index,
-                })
-            time.sleep(1)
+        t1 = threading.Thread(target=self.leader_heartbeat)
+        t2 = threading.Thread(target=self.leader_append_entries)
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+        # while True:
+        #     for peer_id in self.peers:
+        #         # if self.next_index[peer_id] > 0:
+        #         prev_log_index = self.next_index[peer_id] - 1
+        #         prev_log_term = self.log[prev_log_index]['term'] if prev_log_index > 0 else -1
+        #         entries = self.log[self.next_index[peer_id]:]
+        #         # prev_log_index = None
+        #         # prev_log_term = None
+        #         # entries = 'entries'             
+        #         self.send_message(peer_id, 'append_entries', {
+        #             'term': self.current_term,
+        #             'leader_id': self.id,
+        #             'prev_log_index': prev_log_index,
+        #             'prev_log_term': prev_log_term,
+        #             'entries': entries,
+        #             'leader_commit': self.commit_index,
+        #         })
+        #     time.sleep(1)
 
     def handle_request_vote(self, data):
         if data['term'] < self.current_term:
@@ -199,6 +181,7 @@ class RaftNode:
         elif len(self.log) <= data['prev_log_index'] or self.log[data['prev_log_index']]['term'] != data['prev_log_term']:
             return {'term': self.current_term, 'success': False}
         else:
+            # already appended the log
             self.log = self.log[:data['prev_log_index']+1] + data['entries']
             self.commit_index = min(data['leader_commit'], len(self.log)-1)
             return {'term': self.current_term, 'success': True}
@@ -216,71 +199,96 @@ class RaftNode:
         self.socket.sendto(json.dumps(message).encode(), (HOST, usertable[recipient_id]))
 
     def get_random_timeout(self):
-        return random.uniform(5, 10)
-    def UI(self):
-        global g_token
-        print("1. create [<client id>. . .]")
-        print("2. put <dictionary id> <key> <value>")
-        print("3. get <dictionary id> <key>")
-        print("4. printDict <dictionary id>")
-        print("5. printAll")
-        print("6. failLink <dest>")
-        print("7. fixLink <dest>")
-        print("8. failProcess")
-        while True :
-            a = input("please insert command\n")
-            if a == "0" :
-                pass
-            elif a == "1" :
-                pass
-            elif a == "2" :
-                pass
-            elif a == "3" :
-                pass
-            elif a == '4' :
-                pass
-            elif a == '5' :
-                pass
-            elif a == '6' :
-                dest = input('Please enter the dest process\n')
-                if usertable.get(dest) == None or dest == self.id :
-                    print("wrong dest process!")
-                    continue
-                data = 'Fail link'
-                self.sendreq(data, dest)
-                faillink[dest] = 1
-                # s.sendto(data.encode('utf-8'), (HOST, usertable[dest]))
-                print('Fail link %s\n' %(dest))
-                # print(faillink)
-                pass
-            elif a =='7' :
-                dest = input('Please enter the dest process\n')
-                if usertable.get(dest) == None or dest == self.id :
-                    print("wrong dest process!")
-                    continue
-                data = 'Fix link'
-                faillink[dest] = 0
-                self.sendreq(data, dest)
-                # s.sendto(data.encode('utf-8'), (HOST, usertable[dest]))
-                print('Fix link %s' %(dest))
-                pass
-            elif a == '8' :
-                g_token = False
-                print('Fail process %s' %(self.id))
-                data = 'Stop'
-                self.socket.sendto(data.encode('utf-8'), (HOST, usertable[self.id]))
-                break
-            time.sleep(1)
+        return random.uniform(6, 10)
 
     def sendreq(self,data, dest) :
         if faillink[dest] == 0: 
                 self.socket.sendto(data.encode('utf-8'), (HOST, usertable[dest]))
         else :
             print("Unable to connect to process %s" %(dest))
-    # def test(self):
-    #     global test
-    #     test = 1
 
+    def leader_heartbeat(self):
+        while True:
+            for peer_id in self.peers:          
+                self.send_message(peer_id, 'leader_heartbeat', {
+                    'term': self.current_term
+                })
+            time.sleep(3)
+    
+    def leader_append_entries(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind((HOST, l_port))
+        start_time = time.monotonic()
+        majority = 1
+        while True:
+            time.sleep(3)
+            try:
+                data, addr = self.socket.recvfrom(1024)
+                message = json.loads(data.decode())
+                if message['type'] == 'create' or message['type'] == 'put' or message['type'] == 'get':
+                    majority = 1
+                    self.write_logfile()
+                    for peer_id in self.peers:
+                        # if self.next_index[peer_id] > 0:
+                        prev_log_index = self.next_index[peer_id] - 1
+                        prev_log_term = self.log[prev_log_index]['term'] if prev_log_index > 0 else -1
+                        entries = self.log[self.next_index[peer_id]:]
+                        # prev_log_index = None
+                        # prev_log_term = None
+                        # entries = 'entries'             
+                        self.send_message(peer_id, 'append_entries', {
+                            'term': self.current_term,
+                            'leader_id': self.id,
+                            'prev_log_index': prev_log_index,
+                            'prev_log_term': prev_log_term,
+                            'entries': entries,
+                            'leader_commit': self.commit_index,
+                        })
+                    pass
+                if message['type'] == 'ack':
+                    if message['data']['success']:
+                        majority += 1
+                    if majority > len(self.peers) / 2:
+                        for peer_id in self.peers:
+                            self.send_message(peer_id, 'commit', {
+                                'term': self.current_term,
+                                'leader_id': self.id,
+                                'prev_log_index': prev_log_index,
+                                'prev_log_term': prev_log_term,
+                                'entries': entries,
+                                'leader_commit': self.commit_index,
+                            })
+                        majority = 1
+                    pass
+            except socket.timeout:
+                # if time.monotonic() - start_time > self.election_timeout:
+                #     logging.info(f"Node {self.id}: Timeout occurred")
+                #     self.state = 'candidate'
+                #     state = 'candidate'
+                #     break
+                pass
+        while False:
+            for peer_id in self.peers:
+                # if self.next_index[peer_id] > 0:
+                prev_log_index = self.next_index[peer_id] - 1
+                prev_log_term = self.log[prev_log_index]['term'] if prev_log_index > 0 else -1
+                entries = self.log[self.next_index[peer_id]:]
+                # prev_log_index = None
+                # prev_log_term = None
+                # entries = 'entries'             
+                self.send_message(peer_id, 'append_entries', {
+                    'term': self.current_term,
+                    'leader_id': self.id,
+                    'prev_log_index': prev_log_index,
+                    'prev_log_term': prev_log_term,
+                    'entries': entries,
+                    'leader_commit': self.commit_index,
+                })
+        pass
+    
+    def write_logfile(self):
+        pass
+    
 if __name__ == '__main__' :
     while True :
         uid = input("Please input your userid : ")

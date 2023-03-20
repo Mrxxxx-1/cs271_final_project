@@ -56,13 +56,19 @@ def RECV():
         continue
       time.sleep(3)
       try :
-            if isinstance(json.loads(data.decode('utf-8')), dict) :
-                rev = {}
-                rev = json.loads(data.decode('utf-8'))
-                if 'Token' in rev :
+            if isinstance(json.loads(data.decode()), dict) :
+                message = {}
+                message = json.loads(data.decode())
+                if message['type'] == 'commit':
+                    a = ''
+                    if a == 'create':
+                        pass
+                    if a == 'put':
+                        pass
+                    if a == 'get':
+                        pass
                     pass
-                else :
-                    pass
+
       except :
         if data.decode('utf-8') == 'Fail link':
             faillink[user[addr]] = 1
@@ -96,6 +102,7 @@ def UI():
             print("Your list of values is:", clientlist)
             dic = Dictionary(clientlist, counter, username)
             dic.commit_log_entry()
+            # request needed send to leader
             log = dic.log_entry
             dic_file = {
                 'id' : log['dic_id'],
