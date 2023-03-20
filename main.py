@@ -4,7 +4,7 @@ from sys import exit
 import json
 from dictionary import *
 import os
-
+from raft import *
 print("client")
 
 usertable = {1 : 10882, 2 : 10884, 3 : 10886, 4 : 10888, 5 : 10900} 
@@ -13,6 +13,7 @@ faillink = {1 : 0, 2 : 0, 3 : 0, 4 : 0, 5 : 0, 10666 : 0}
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 usertable2 = {1 : 10782, 2 : 10784, 3 : 10786, 4 : 10788, 5 : 10700}
 l_port = 10666
+userlist = [1, 2, 3]
 
 while True :
     username = input("Please input your username : ")
@@ -44,7 +45,7 @@ def write_dic_id():
 g_token = True
 g_dictionary = []
 g_dictionary = read_dic_id()
-print(g_dictionary)
+# print(g_dictionary)
 
 lock = threading.Lock()
 
@@ -54,7 +55,7 @@ def RECV():
     icount = 0 
     while g_token:
       try:
-        (data, addr) = s.recvfrom(1024)
+        (data, addr) = s.recvfrom(4096)
       except ConnectionResetError:
         print("Unable to connect to process")
         continue
@@ -64,12 +65,24 @@ def RECV():
                 message = {}
                 message = json.loads(data.decode())
                 if message['type'] == 'commit':
-                    a = ''
+                    print('handling commit entries from leader')
+                    data = message['data']
+                    a = message['type']
                     if a == 'create':
+                        if str(username) in data['members']:
+                            counter += 1
+                            dic_file = {
+                                'id' : data['dic_id'],
+                                'members' : data['members']
+                            }
+                            dic_write(dic_file, data['dic_id'], str(username))
+                            g_dictionary.append(str(data['dic_id']))
+                            write_dic_id()
                         pass
                     if a == 'put':
-                        pass
-                    if a == 'get':
+                        if str(data['dic_id']) in g_dictionary:
+                            dic = {}
+                            dic_write(dic,data['dic_id'], str(username))
                         pass
                     pass
 
@@ -111,6 +124,7 @@ def UI():
             message_s = json.dumps(log)
             sendreq(message_s, l_port)
             print('send message to leader')
+            #####
             dic_file = {
                 'id' : log['dic_id'],
                 'members' : log['members']
@@ -146,6 +160,9 @@ def UI():
             }
             message_s = json.dumps(message)
             sendreq(message_s, l_port)
+            print('send message to leader')
+            ##
+            
             dic = {}
             dic = dic_read(message['dic_id'], str(username))
             dic[parameter[1]] = parameter[2]
@@ -166,6 +183,8 @@ def UI():
             }
             message_s = json.dumps(message)
             sendreq(message_s, l_port)
+            print('send message to leader')
+            ##
             data = {}
             data = dic_read(message['dic_id'], str(username))
             key = data[parameter[1]]
@@ -223,33 +242,40 @@ def sendreq(data, dest) :
 
 n = 0
 
-t1 = threading.Thread(target=RECV)
+list1 = userlist
+list1.remove(username)
+node1 = RaftNode(username, list1)
+# t1 = threading.Thread(target=RECV)
 t2 = threading.Thread(target=UI)
+t3 = threading.Thread(target=node1.start)
+logging.basicConfig(level=logging.INFO)
 
-t1.start()
+# t1.start()
 t2.start()
+t3.start()
 
 t2.join()
-n = n + 1
-t1.join()
-n = n + 1
+# n = n + 1
+# # t1.join()
+# n = n + 1
+t3.join()
 
-while True:
-    if n == 2:
-        while True :
-            command = input("Please input Y to restart the process : ")
-            if command != 'Y' :
-                print("wrong command!")
-                continue
-            n = 0
-            t1 = threading.Thread(target=RECV)
-            t2 = threading.Thread(target=UI)
-            t1.start()
-            t2.start()
+# while True:
+#     if n == 2:
+#         while True :
+#             command = input("Please input Y to restart the process : ")
+#             if command != 'Y' :
+#                 print("wrong command!")
+#                 continue
+#             n = 0
+#             t1 = threading.Thread(target=RECV)
+#             t2 = threading.Thread(target=UI)
+#             t1.start()
+#             t2.start()
 
-            t2.join()
-            n = n + 1
-            t1.join()
-            n = n + 1
-            break 
-    time.sleep(1)
+#             t2.join()
+#             n = n + 1
+#             t1.join()
+#             n = n + 1
+#             break 
+#     time.sleep(1)

@@ -2,7 +2,7 @@
 Author: Mrx
 Date: 2023-03-18 17:27:35
 LastEditors: Mrx
-LastEditTime: 2023-03-18 23:57:02
+LastEditTime: 2023-03-20 12:11:51
 FilePath: \cs271_final_project\keys_for_clients.py
 Description: 
 
@@ -23,7 +23,7 @@ def generate_key_pair(client_id):
     # Generate the RSA key pair
     private_key = rsa.generate_private_key(
         public_exponent=65537,
-        key_size=2048,
+        key_size=1024,
     )
     public_key = private_key.public_key()
 

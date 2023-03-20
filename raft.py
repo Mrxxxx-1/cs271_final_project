@@ -2,7 +2,7 @@
 Author: Mrx
 Date: 2023-03-17 08:36:25
 LastEditors: Mrx
-LastEditTime: 2023-03-20 08:53:42
+LastEditTime: 2023-03-20 12:19:37
 FilePath: \cs271_final_project\raft.py
 Description: 
 
@@ -15,11 +15,11 @@ import time
 import random
 import logging
 
-print("client")
+# print("client")
 usertable = {1 : 10882, 2 : 10884, 3 : 10886, 4 : 10888, 5 : 10900} 
 user = { ('192.168.0.167', 10882) : 1, ('192.168.0.167', 10884) : 2, ('192.168.0.167', 10886) : 3, ('192.168.0.167', 10888) : 4, ('192.168.0.167', 10900) : 5}
 faillink = {1 : 0, 2 : 0, 3 : 0, 4 : 0, 5 : 0}
-userlist = [1, 2, 3]
+userlist = [1, 2, 3, 4, 5]
 usertable2 = {1 : 10782, 2 : 10784, 3 : 10786, 4 : 10788, 5 : 10700}
 l_port = 10666
 HOST = '192.168.0.167'
@@ -73,12 +73,12 @@ class RaftNode:
                 elif message['type'] == 'append_entries':
                     response = self.handle_append_entries(message['data'])
                     print('handling append entries from leader')
-                    self.send_message(message['from'], 'ack', response)
+                    self.send_to_leader(message['from'], 'ack', response)
                 elif message['type'] == 'leader_heartbeat':
                     self.handle_leader_heartbeat(message['data'])
                     start_time = time.monotonic()
                 elif message['type'] == 'commit':
-                    print('handling commit entries from leader')
+                    print('commit log entry')
                     pass
             except socket.timeout:
                 if time.monotonic() - start_time > self.election_timeout:
@@ -232,10 +232,10 @@ class RaftNode:
         return random.uniform(6, 10)
 
     def sendreq(self,data, dest) :
-        if faillink[dest] == 0: 
-                self.socket.sendto(data.encode('utf-8'), (HOST, usertable[dest]))
-        else :
-            print("Unable to connect to process %s" %(dest))
+        # if faillink[dest] == 0: 
+        self.socket.sendto(data.encode('utf-8'), (HOST, usertable2[dest]))
+        # else :
+        #     print("Unable to connect to process %s" %(dest))
 
     def leader_heartbeat(self):
         while True:
@@ -263,7 +263,8 @@ class RaftNode:
                         'term': self.current_term,
                         'index': self.next_index,
                         'type': message['type'],
-                        'data': message['data']
+                        'data': message['data'],
+                        'client': message['from']
                     }
                     self.write_logfile(log_entry)
                     for peer_id in self.peers:
@@ -286,9 +287,19 @@ class RaftNode:
                 if message['type'] == 'ack':
                     if message['data']['success']:
                         majority += 1
+                        self.commit_index += 1
                         self.next_index[message['from']] += 1
                     if majority > len(self.peers) / 2:
                         for peer_id in self.peers:
+                            data = json.dumps(entries)
+                        for peer_id in self.peers:
+                            # if self.next_index[peer_id] > 0:
+                            prev_log_index = self.next_index[peer_id] - 1
+                            prev_log_term = self.log[prev_log_index]['term'] if prev_log_index > 0 else -1
+                            entries = []
+                            # prev_log_index = None
+                            # prev_log_term = None
+                            # entries = 'entries'             
                             self.send_message(peer_id, 'commit', {
                                 'term': self.current_term,
                                 'leader_id': self.id,
@@ -323,23 +334,23 @@ class RaftNode:
             my_list = json.loads(my_list)
             return my_list
 
-if __name__ == '__main__' :
-    while True :
-        uid = input("Please input your userid : ")
-        uid = int(uid)
-        if usertable.get(uid) == None :
-            print("wrong userid!")
-            continue
-        break   
-    logging.basicConfig(level=logging.INFO)
-    list1 = userlist
-    list1.remove(uid)
-    node1 = RaftNode(uid, list1)
-    node2 = RaftNode(2, [1, 3])
-    node3 = RaftNode(3, [1, 2])
-    threading.Thread(target=node1.start).start()
-    threading.Thread(target=node2.start).start()
-    threading.Thread(target=node3.start).start()
+# if __name__ == '__main__' :
+#     while True :
+#         uid = input("Please input your userid : ")
+#         uid = int(uid)
+#         if usertable.get(uid) == None :
+#             print("wrong userid!")
+#             continue
+#         break   
+#     logging.basicConfig(level=logging.INFO)
+#     list1 = userlist
+#     list1.remove(uid)
+#     node1 = RaftNode(uid, list1)
+#     node2 = RaftNode(2, [1, 3])
+#     node3 = RaftNode(3, [1, 2])
+#     threading.Thread(target=node1.start).start()
+#     threading.Thread(target=node2.start).start()
+    # threading.Thread(target=node3.start).start()
     # node1 = RaftNode(1, userlist)
     # node1.test()
     # print(test)
