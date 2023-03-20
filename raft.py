@@ -2,7 +2,7 @@
 Author: Mrx
 Date: 2023-03-17 08:36:25
 LastEditors: Mrx
-LastEditTime: 2023-03-20 12:33:03
+LastEditTime: 2023-03-20 13:14:49
 FilePath: \cs271_final_project\raft.py
 Description: 
 
@@ -146,6 +146,8 @@ class RaftNode:
                     self.state = 'candidate'
                     state = 'candidate'
                     break
+            except ConnectionResetError:
+                continue
     
     def leader(self):
         logging.info(f"Node {self.id}: Entering leader state")

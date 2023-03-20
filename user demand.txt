@@ -1,1 +1,0 @@
-persistent disk storage of Raft's state (log, state machine and dictionary?)

@@ -13,7 +13,7 @@ faillink = {1 : 0, 2 : 0, 3 : 0, 4 : 0, 5 : 0, 10666 : 0}
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 usertable2 = {1 : 10782, 2 : 10784, 3 : 10786, 4 : 10788, 5 : 10700}
 l_port = 10666
-userlist = [1, 2, 3]
+userlist = [1, 2, 3, 4, 5]
 
 while True :
     username = input("Please input your username : ")
@@ -46,7 +46,7 @@ g_token = True
 g_dictionary = []
 g_dictionary = read_dic_id()
 # print(g_dictionary)
-
+g_operation = False
 lock = threading.Lock()
 
 def RECV():
@@ -65,25 +65,35 @@ def RECV():
                 message = {}
                 message = json.loads(data.decode())
                 if message['type'] == 'commit':
-                    print('handling commit entries from leader')
+                    print('commit log entry')
                     data = message['data']
-                    a = message['type']
+                    a = data['type']
                     if a == 'create':
-                        if str(username) in data['members']:
-                            counter += 1
-                            dic_file = {
-                                'id' : data['dic_id'],
-                                'members' : data['members']
+                        if g_operation == True:
+                            id = data['dic_id'],
+                            members = data['members']
+                            r_dic = {}
+                            r_dic = dic_read(id, str(username))
+                            r_dic = json.dumps(r_dic)
+                            r_data = {
+                                'type' : 'r_dic',
+                                'data' : r_dic
                             }
-                            dic_write(dic_file, data['dic_id'], str(username))
-                            g_dictionary.append(str(data['dic_id']))
-                            write_dic_id()
+                            # dic_write(dic_file, data['dic_id'], str(username))
+                            # g_dictionary.append(str(data['dic_id']))
+                            # write_dic_id()
+                        g_operation == False
                         pass
                     if a == 'put':
                         if str(data['dic_id']) in g_dictionary:
                             dic = {}
                             dic_write(dic,data['dic_id'], str(username))
                         pass
+                    if a == 'get':
+                        if g_operation == True:
+                            pass
+                        g_operation == False
+                if message['type'] == 'r_dic':
                     pass
 
       except :
@@ -100,6 +110,7 @@ def RECV():
 def UI():
     global g_token
     global g_dictionary
+    global g_operation
     counter = 11
     print("1. create [<client id>. . .]")
     print("2. put <dictionary id> <key> <value>")
@@ -124,6 +135,7 @@ def UI():
             message_s = json.dumps(log)
             sendreq(message_s, l_port)
             print('send message to leader')
+            g_operation = True
             #####
             dic_file = {
                 'id' : log['dic_id'],
@@ -161,8 +173,9 @@ def UI():
             message_s = json.dumps(message)
             sendreq(message_s, l_port)
             print('send message to leader')
+            g_operation = True
             ##
-            
+        
             dic = {}
             dic = dic_read(message['dic_id'], str(username))
             dic[parameter[1]] = parameter[2]
@@ -184,6 +197,7 @@ def UI():
             message_s = json.dumps(message)
             sendreq(message_s, l_port)
             print('send message to leader')
+            g_operation = True
             ##
             data = {}
             data = dic_read(message['dic_id'], str(username))
