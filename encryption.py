@@ -2,7 +2,7 @@
 Author: Mrx
 Date: 2023-03-18 17:19:59
 LastEditors: Mrx
-LastEditTime: 2023-03-19 10:49:33
+LastEditTime: 2023-03-19 12:52:13
 FilePath: \cs271_final_project\encryption.py
 Description: 
 
@@ -149,6 +149,6 @@ def decrypt_message(encrypted, private_key):
 # print("Decrypted message:", decrypted)
 
 # clientlist = ['A', 'B', 'C', 'D']
-clientlist = [1, 2, 3, 4, 5]
-key =  generate_dictionary_key(clientlist, 111, 1)
-print(key)
+# clientlist = [1, 2, 3, 4, 5]
+# key =  generate_dictionary_key(clientlist, 111, 1)
+# print(key)
