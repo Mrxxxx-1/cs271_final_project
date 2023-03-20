@@ -2,7 +2,7 @@
 Author: Mrx
 Date: 2023-03-17 08:36:25
 LastEditors: Mrx
-LastEditTime: 2023-03-20 12:19:37
+LastEditTime: 2023-03-20 12:33:03
 FilePath: \cs271_final_project\raft.py
 Description: 
 
@@ -308,7 +308,7 @@ class RaftNode:
                                 'entries': entries,
                                 'leader_commit': self.commit_index,
                             })
-                        majority = 1
+                        majority = -1
                     pass
             except socket.timeout:
                 # if time.monotonic() - start_time > self.election_timeout:
