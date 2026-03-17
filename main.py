@@ -7,8 +7,12 @@ import os
 from raft import *
 print("client")
 
+HOST = os.environ.get("DD_HOST", "127.0.0.1")
+# Use a separate bind host if needed (e.g., "0.0.0.0" for all interfaces).
+BIND_HOST = os.environ.get("DD_BIND_HOST", HOST)
+
 usertable = {1 : 10882, 2 : 10884, 3 : 10886, 4 : 10888, 5 : 10900} 
-user = { ('192.168.0.167', 10882) : 1, ('192.168.0.167', 10884) : 2, ('192.168.0.167', 10886) : 3, ('192.168.0.167', 10888) : 4, ('192.168.0.167', 10900) : 5}
+user = {(HOST, port): uid for uid, port in usertable.items()}
 faillink = {1 : 0, 2 : 0, 3 : 0, 4 : 0, 5 : 0, 10666 : 0}
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 usertable2 = {1 : 10782, 2 : 10784, 3 : 10786, 4 : 10788, 5 : 10700}
@@ -24,8 +28,7 @@ while True :
     break
 
 PORT = usertable2[username]
-HOST = '192.168.0.167'
-s.bind((HOST, PORT))
+s.bind((BIND_HOST, PORT))
 
 
 def read_dic_id():

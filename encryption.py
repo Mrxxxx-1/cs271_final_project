@@ -49,12 +49,7 @@ def generate_dictionary_key(clientlist, dic_id, client_id):
     member_keys = {}
     for client in clientlist:
         client_public_key = load_public_key(client, client)
-        # print(private_key_bytes)
-        # private_key_bytes = 'fuck'
-        # print(client_public_key)
         encrypted_private_key = encrypt_message(private_key, client_public_key)
-        
-        # encrypted_private_key = encrypt_message(private_key, client_public_key)
         member_keys[client] = str(encrypted_private_key)
         # print(encrypted_private_key)
         # print(bytes(encrypted_private_key))
@@ -112,7 +107,7 @@ def load_public_key(client_id, file_name):
     return public_key
 
 def encrypt_message(message, public_key):
-    # Encrypt the message with the public key
+    """Encrypt a UTF-8 string message with the given RSA public key."""
     encrypted = public_key.encrypt(
         message.encode('utf-8'),
         padding.OAEP(
@@ -124,7 +119,7 @@ def encrypt_message(message, public_key):
     return encrypted
 
 def decrypt_message(encrypted, private_key):
-    # Decrypt the message with the private key
+    """Decrypt bytes with the given RSA private key and return a UTF-8 string."""
     decrypted = private_key.decrypt(
         encrypted,
         padding.OAEP(

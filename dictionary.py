@@ -15,6 +15,14 @@ from encryption import *
 import json
 
 class Dictionary:
+    """Encrypted distributed dictionary metadata.
+
+    Wraps a single logical dictionary shared by multiple members. Each
+    dictionary has a unique ID, a list of member client IDs, and a set of
+    encryption keys generated via `encryption.generate_dictionary_key`. The
+    `log_entry` field is the Raft log command used to create the dictionary
+    in the replicated state machine.
+    """
     def __init__(self, members, counter, client_id):
         self.id = self.generate_unique_id(counter)
         self.client_id = client_id

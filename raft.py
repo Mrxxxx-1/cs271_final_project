@@ -14,21 +14,32 @@ import json
 import time
 import random
 import logging
+import os
 
 # print("client")
+HOST = os.environ.get("DD_HOST", "127.0.0.1")
+# Use a separate bind host if needed (e.g., "0.0.0.0" for all interfaces).
+BIND_HOST = os.environ.get("DD_BIND_HOST", HOST)
+
 usertable = {1 : 10882, 2 : 10884, 3 : 10886, 4 : 10888, 5 : 10900} 
-user = { ('192.168.0.167', 10882) : 1, ('192.168.0.167', 10884) : 2, ('192.168.0.167', 10886) : 3, ('192.168.0.167', 10888) : 4, ('192.168.0.167', 10900) : 5}
+user = {(HOST, port): uid for uid, port in usertable.items()}
 faillink = {1 : 0, 2 : 0, 3 : 0, 4 : 0, 5 : 0}
 userlist = [1, 2, 3, 4, 5]
 usertable2 = {1 : 10782, 2 : 10784, 3 : 10786, 4 : 10788, 5 : 10700}
 l_port = 10666
-HOST = '192.168.0.167'
 
 g_token = True
 state = 'follower'
 test = 0
 
 class RaftNode:
+    """A single Raft node running over UDP.
+
+    Each process starts one `RaftNode` with a unique ID and a list of peer IDs.
+    Nodes exchange JSON-encoded UDP messages for leader election, heartbeats,
+    and log replication. Client requests are sent to the current leader, which
+    appends them to its log and replicates them to followers.
+    """
     def __init__(self, id, peers):
         self.id = id
         self.peers = peers
@@ -42,7 +53,7 @@ class RaftNode:
         self.match_index = {peer_id: -1 for peer_id in self.peers}
         self.election_timeout = self.get_random_timeout()
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind((HOST, usertable[id]))
+        self.socket.bind((BIND_HOST, usertable[id]))
         self.socket.settimeout(0.1)
 
     def start(self):
@@ -249,7 +260,7 @@ class RaftNode:
     
     def leader_append_entries(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind((HOST, l_port))
+        s.bind((BIND_HOST, l_port))
         start_time = time.monotonic()
         majority = 1
         while True:
